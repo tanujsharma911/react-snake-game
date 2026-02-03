@@ -4,7 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router";
-import Home from "./pages/Home.tsx";
+import Game from "./pages/Game.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const router = createBrowserRouter([
@@ -14,7 +14,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Home />,
+        element: <Game />,
       },
       {
         path: "/:other",
