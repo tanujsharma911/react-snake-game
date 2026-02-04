@@ -31,10 +31,10 @@ const Game = () => {
   const [appleState, setAppleState] = useState<number[]>([3, 3]);
   const appleRef = useRef<number[] | null>([3, 3]);
 
-  const upBtnRef = useRef(null);
-  const leftBtnRef = useRef(null);
-  const rightBtnRef = useRef(null);
-  const bottomBtnRef = useRef(null);
+  const upBtnRef = useRef<HTMLButtonElement | null>(null);
+  const leftBtnRef = useRef<HTMLButtonElement | null>(null);
+  const rightBtnRef = useRef<HTMLButtonElement | null>(null);
+  const bottomBtnRef = useRef<HTMLButtonElement | null>(null);
 
   /* ------------------------------- HELPER FUNC ------------------------------- */
   const isSnakeBody = (x: number, y: number) => {
