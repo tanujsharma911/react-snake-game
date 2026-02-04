@@ -1,103 +1,158 @@
 // import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+const TICK_SPEED = 200;
 const DISPLAY_SIZE = 25;
 const DISPLAY_GRID: string[][] = Array.from({ length: DISPLAY_SIZE }, () => {
   return new Array(DISPLAY_SIZE).fill("");
 });
+const DEFAULT_SNAKE = [
+  [9, 9],
+  [8, 9],
+];
 
 const Game = () => {
-  const [snakeBody, setSnakeBody] = useState<number[][]>([[9, 9]]);
+  /* ------------------------------- STATES ------------------------------- */
+  const [snakeBody, setSnakeBody] = useState<number[][]>(DEFAULT_SNAKE);
   const [score, setScore] = useState(0);
-  const [apple, setApple] = useState([3, 3]);
-  const changePos = { x: -1, y: 0 };
 
+  const changePos = { x: -1, y: 0 };
+  const movementDir = useRef<string>("left");
+
+  const [appleState, setAppleState] = useState<number[]>([3, 3]);
+  const appleRef = useRef<number[] | null>([3, 3]);
+
+  /* ------------------------------- HELPER FUNC ------------------------------- */
+  const isSnakeBody = (x: number, y: number) => {
+    return snakeBody.some(([a, b]) => a === x && b === y);
+  };
+
+  const isApple = (x: number, y: number) => {
+    if (appleState === null) return false;
+
+    return appleState[0] === x && appleState[1] === y;
+  };
+
+  const insideGrid = (x: number, y: number) => {
+    if (x < DISPLAY_SIZE && 0 <= x && y < DISPLAY_SIZE && 0 <= y) return true;
+
+    return false;
+  };
+
+  /* ------------------------------- UPDATE LOOP ------------------------------- */
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.code) {
+        case "ArrowRight":
+          if (movementDir.current === "left") break;
+          changePos.x = 1;
+          changePos.y = 0;
+          movementDir.current = "right";
+          break;
+
+        case "ArrowLeft":
+          if (movementDir.current === "right") break;
+          changePos.x = -1;
+          changePos.y = 0;
+          movementDir.current = "left";
+          break;
+
+        case "ArrowUp":
+          if (movementDir.current === "down") break;
+          changePos.y = -1;
+          changePos.x = 0;
+          movementDir.current = "up";
+          break;
+
+        case "ArrowDown":
+          if (movementDir.current === "up") break;
+          changePos.x = 0;
+          changePos.y = 1;
+          movementDir.current = "down";
+          break;
+      }
+    };
+
+    const generateApple = () => {
+      const randomX = Math.floor(Math.random() * DISPLAY_SIZE);
+      const randomY = Math.floor(Math.random() * DISPLAY_SIZE);
+
+      console.log(randomX, randomY);
+
+      appleRef.current = [randomX, randomY];
+      setAppleState([randomX, randomY]);
+    };
+
+    const gameOver = () => {
+      setScore(0);
+      generateApple();
+    };
+
     const update = () => {
-      setSnakeBody((prev) => {
-        const [headX, headY] = prev[0];
+      setSnakeBody((prevSnakeBodyArray) => {
+        const snakeBodyArray = prevSnakeBodyArray.map((arr) => [...arr]);
+        const oldHead = snakeBodyArray[0];
+
+        const newHead = [oldHead[0] + changePos.x, oldHead[1] + changePos.y];
+
+        const collideItself = snakeBodyArray.some(
+          (body, i) =>
+            body[0] === newHead[0] && body[1] === newHead[1] && i !== 1,
+        );
+
+        const isGameOver = collideItself || !insideGrid(newHead[0], newHead[1]);
+
+        if (isGameOver) {
+          gameOver();
+          return DEFAULT_SNAKE;
+        }
+
+        snakeBodyArray.unshift(newHead); // Move ahead
 
         if (
-          headX === DISPLAY_SIZE ||
-          headY === DISPLAY_SIZE ||
-          headY === -1 ||
-          headX === -1
+          appleRef.current !== null &&
+          appleRef.current[0] === newHead[0] &&
+          appleRef.current[1] === newHead[1]
         ) {
-          setScore(0);
-          return [[9, 9]];
-        }
-
-        const newHead = [headX + changePos.x, headY + changePos.y];
-
-        if (headX === apple[0] && headY === apple[1]) {
           setScore((prev) => prev + 1);
-
-          return [newHead, ...prev];
+          generateApple();
+        } else {
+          snakeBodyArray.pop(); // Remove tail
         }
 
-        return [newHead, ...prev.filter((c, i) => i !== prev.length - 1)];
+        return snakeBodyArray;
       });
     };
 
     const clock = setInterval(() => {
       update();
-    }, 200);
+    }, TICK_SPEED);
 
-    document.addEventListener("keydown", (e) => {
-      switch (e.code) {
-        case "ArrowRight":
-          console.log("Move Right");
-          changePos.x = 1;
-          changePos.y = 0;
-          break;
-
-        case "ArrowLeft":
-          console.log("Move Left");
-          changePos.x = -1;
-          changePos.y = 0;
-          break;
-
-        case "ArrowUp":
-          console.log("Move Up");
-          changePos.y = -1;
-          changePos.x = 0;
-          break;
-
-        case "ArrowDown":
-          console.log("Move Down");
-          changePos.x = 0;
-          changePos.y = 1;
-          break;
-      }
-    });
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       clearInterval(clock);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
-
-  const isSnakeBody = (x: number, y: number) => {
-    return snakeBody.some(([a, b]) => a === x && b === y);
-  };
-
-  const isApple = (r: number, c: number) => {
-    return apple[0] === c && apple[1] === r;
-  };
+  }, [appleRef, movementDir]);
 
   return (
-    <div className="w-full h-screen bg-background grid place-content-center">
-      <h1>{score}</h1>
+    <div className="w-full h-screen bg-background grid place-content-center gap-5">
+      <h1 className="scroll-m-20 text-center text-4xl font-extrabold tracking-tight text-balance">
+        <span className="opacity-60">Score: </span> {score}
+      </h1>
       <div className={`w-100 h-100 border-2 grid grid-rows-25 grid-cols-25`}>
-        {DISPLAY_GRID.map((rows, r) => {
-          return rows.map((cell, c) => {
+        {DISPLAY_GRID.map((rows, y) => {
+          return rows.map((cell, x) => {
             return (
               <div
-                key={r * DISPLAY_SIZE + c}
+                key={y * DISPLAY_SIZE + x}
                 className={cn(
-                  isApple(r, c) && "bg-red-400",
-                  isSnakeBody(c, r) && "bg-green-400",
+                  isApple(x, y) &&
+                    "bg-red-400 shadow-[0_0_5px_oklch(0.40 0.13 26)]",
+                  isSnakeBody(x, y) && "bg-green-400",
                 )}
               >
                 {cell}
